@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0c1a12">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Folia">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>Folia — Cuidado de plantas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Karla:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c1a12;
+    --bg-deep:#081209;
+    --surface:#13251a;
+    --surface-2:#1a3022;
+    --surface-3:#22402d;
+    --line:rgba(240,234,216,.09);
+    --cream:#f2ecda;
+    --muted:#9cb3a2;
+    --faint:#6e8577;
+    --sage:#a8c98a;
+    --leaf:#7fb069;
+    --terra:#e0784f;
+    --terra-soft:#eda06f;
+    --amber:#e8b04b;
+    --danger:#e06363;
+    --radius:22px;
+    --font-display:"Fraunces",serif;
+    --font-body:"Karla",sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:var(--font-body);
+    background:var(--bg-deep);
+    color:var(--cream);
+    min-height:100dvh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+  }
+  /* ---------- marco tipo teléfono ---------- */
+  .phone{
+    position:relative;
+    width:100%;
+    max-width:430px;
+    height:100dvh;
+    max-height:100dvh;
+    background:
+      radial-gradient(120% 60% at 85% -10%, rgba(127,176,105,.16), transparent 60%),
+      radial-gradient(90% 50% at 0% 110%, rgba(224,120,79,.10), transparent 55%),
+      var(--bg);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    isolation:isolate;
+  }
+  @media (min-width:480px){
+    .phone{
+      height:min(880px,94dvh);
+      border-radius:42px;
+      border:1px solid rgba(240,234,216,.12);
+      box-shadow:0 50px 120px -30px rgba(0,0,0,.85), 0 0 0 10px #050a06;
+    }
+  }
+  /* grano sutil */
+  .phone::after{
+    content:"";
+    position:absolute;inset:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    pointer-events:none;z-index:50;
+  }
+  /* hoja decorativa de fondo */
+  .bg-leaf{
+    position:absolute;z-index:0;pointer-events:none;opacity:.07;
+  }
+  .bg-leaf.uno{top:-40px;right:-60px;width:260px;transform:rotate(25deg)}
+  .bg-leaf.dos{bottom:60px;left:-80px;width:300px;transform:rotate(-160deg)}
+
+  /* ---------- cabecera ---------- */
+  header{
+    position:relative;z-index:5;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:max(18px, env(safe-area-inset-top)) 22px 14px;
+  }
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand-mark{
+    width:38px;height:38px;border-radius:13px;
+    background:linear-gradient(145deg,var(--surface-3),var(--surface));
+    border:1px solid var(--line);
+    display:grid;place-items:center;
+    box-shadow:inset 0 1px 0 rgba(240,234,216,.08);
+  }
+  .brand h1{
+    font-family:var(--font-display);
+    font-size:1.45rem;font-weight:600;letter-spacing:.01em;
+    font-variation-settings:"opsz" 40;
+  }
+  .brand h1 em{font-style:italic;color:var(--sage)}
+  .icon-btn{
+    width:38px;height:38px;border-radius:13px;
+    background:var(--surface);border:1px solid var(--line);
+    color:var(--muted);display:grid;place-items:center;cursor:pointer;
+    transition:.25s;
+  }
+  .icon-btn:hover{color:var(--cream);background:var(--surface-2)}
+
+  /* ---------- páginas ---------- */
+  main{position:relative;z-index:2;flex:1;overflow:hidden}
+  .page{
+    position:absolute;inset:0;
+    overflow-y:auto;
+    padding:6px 22px 110px;
+    opacity:0;transform:translateY(14px);
+    pointer-events:none;
+    transition:opacity .35s ease, transform .35s ease;
+    scrollbar-width:none;
+  }
+  .page::-webkit-scrollbar{display:none}
+  .page.activa{opacity:1;transform:none;pointer-events:auto}
+
+  .kicker{
+    font-size:.68rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--terra-soft);margin-bottom:6px;
+  }
+  h2.titulo{
+    font-family:var(--font-display);
+    font-weight:500;font-size:1.9rem;line-height:1.12;
+    font-variation-settings:"opsz" 60;
+    margin-bottom:18px;
+  }
+  h2.titulo em{font-style:italic;color:var(--sage)}
+
+  /* animación de entrada escalonada */
+  .page.activa .reveal{animation:sube .55s cubic-bezier(.22,1,.36,1) both}
+  .page.activa .reveal:nth-child(2){animation-delay:.06s}
+  .page.activa .reveal:nth-child(3){animation-delay:.12s}
+  .page.activa .reveal:nth-child(4){animation-delay:.18s}
+  .page.activa .reveal:nth-child(5){animation-delay:.24s}
+  .page.activa .reveal:nth-child(6){animation-delay:.3s}
+  @keyframes sube{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+
+  /* ---------- tarjetas genéricas ---------- */
+  .card{
+    background:linear-gradient(160deg,var(--surface-2),var(--surface));
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px;
+  }
+
+  /* ---------- INICIO ---------- */
+  .saludo{font-size:.95rem;color:var(--muted);margin:4px 0 2px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+  .stat{
+    background:var(--surface);border:1px solid var(--line);
+    border-radius:18px;padding:13px 12px;
+  }
+  .stat b{
+    display:block;font-family:var(--font-display);font-size:1.5rem;font-weight:600;
+  }
+  .stat span{font-size:.72rem;color:var(--muted);letter-spacing:.02em}
+  .stat.alerta b{color:var(--amber)}
+  .stat.hum b{color:var(--sage)}
+
+  .seccion-label{
+    display:flex;justify-content:space-between;align-items:baseline;margin:4px 2px 12px;
+  }
+  .seccion-label h3{font-family:var(--font-display);font-weight:500;font-size:1.15rem}
+  .seccion-label a{font-size:.78rem;color:var(--terra-soft);text-decoration:none;cursor:pointer}
+
+  .carrusel{
+    display:flex;gap:12px;overflow-x:auto;padding:2px 2px 8px;margin:0 -22px;padding-left:22px;padding-right:22px;
+    scrollbar-width:none;scroll-snap-type:x mandatory;
+  }
+  .carrusel::-webkit-scrollbar{display:none}
+  .planta-card{
+    flex:0 0 150px;scroll-snap-align:start;
+    background:linear-gradient(165deg,var(--surface-3),var(--surface));
+    border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px;position:relative;overflow:hidden;
+    transition:transform .25s;
+  }
+  .planta-card:active{transform:scale(.97)}
+  .planta-emoji{
+    font-size:2.3rem;line-height:1;margin-bottom:10px;display:block;
+    filter:drop-shadow(0 6px 12px rgba(0,0,0,.4));
+  }
+  .planta-card h4{font-family:var(--font-display);font-weight:500;font-size:1rem;margin-bottom:2px}
+  .planta-card p{font-size:.72rem;color:var(--muted);margin-bottom:10px}
+  .mini-hum{display:flex;align-items:center;gap:7px;font-size:.72rem;color:var(--sage)}
+  .mini-barra{flex:1;height:4px;border-radius:99px;background:rgba(240,234,216,.1);overflow:hidden}
+  .mini-barra i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--leaf),var(--sage))}
+  .planta-card .alerta-dot{
+    position:absolute;top:12px;right:12px;width:9px;height:9px;border-radius:50%;
+    background:var(--amber);box-shadow:0 0 0 4px rgba(232,176,75,.15);
+    animation:late 2s infinite;
+  }
+  @keyframes late{50%{box-shadow:0 0 0 7px rgba(232,176,75,.05)}}
+
+  .tip-card{
+    margin-top:18px;display:flex;gap:14px;align-items:flex-start;
+    background:linear-gradient(150deg,rgba(224,120,79,.14),rgba(224,120,79,.04));
+    border:1px solid rgba(224,120,79,.25);
+  }
+  .tip-card .tip-icono{font-size:1.5rem;line-height:1.2}
+  .tip-card h4{font-family:var(--font-display);font-weight:500;margin-bottom:4px}
+  .tip-card p{font-size:.82rem;color:var(--muted);line-height:1.5}
+
+  .accesos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+  .acceso{
+    display:flex;flex-direction:column;gap:10px;cursor:pointer;
+    padding:16px;border-radius:var(--radius);
+    background:var(--surface);border:1px solid var(--line);
+    transition:.25s;
+  }
+  .acceso:hover{background:var(--surface-2);transform:translateY(-2px)}
+  .acceso .ic{
+    width:40px;height:40px;border-radius:14px;display:grid;place-items:center;font-size:1.15rem;
+  }
+  .acceso:nth-child(1) .ic{background:rgba(127,176,105,.16)}
+  .acceso:nth-child(2) .ic{background:rgba(224,120,79,.16)}
+  .acceso b{font-size:.9rem;font-weight:700}
+  .acceso span{font-size:.72rem;color:var(--muted)}
+
+  /* ---------- ESCÁNER ---------- */
+  .zona-subida{
+    position:relative;
+    border:1.5px dashed rgba(168,201,138,.4);
+    border-radius:26px;
+    background:rgba(127,176,105,.05);
+    min-height:300px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+    text-align:center;padding:24px;cursor:pointer;overflow:hidden;
+    transition:.3s;
+  }
+  .zona-subida:hover{background:rgba(127,176,105,.1);border-color:var(--sage)}
+  .zona-subida .gran-icono{
+    width:64px;height:64px;border-radius:22px;
+    background:linear-gradient(145deg,var(--surface-3),var(--surface));
+    border:1px solid var(--line);
+    display:grid;place-items:center;font-size:1.7rem;
+    animation:flota 3.5s ease-in-out infinite;
+  }
+  @keyframes flota{50%{transform:translateY(-7px)}}
+  .zona-subida h3{font-family:var(--font-display);font-weight:500;font-size:1.2rem}
+  .zona-subida p{font-size:.8rem;color:var(--muted);max-width:240px;line-height:1.5}
+  .zona-subida .formatos{font-size:.68rem;color:var(--faint);letter-spacing:.08em;text-transform:uppercase}
+  .zona-subida.con-foto{border-style:solid;border-color:var(--line);padding:0;background:#000}
+  .zona-subida video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  input[type="file"]{display:none}
+
+  /* visor 3D (turntable de fotogramas) */
+  .visor3d{margin-top:18px;padding:14px;display:none}
+  .visor3d.visible{display:block;animation:sube .5s cubic-bezier(.22,1,.36,1) both}
+  .visor3d h3{font-family:var(--font-display);font-weight:500;font-size:1.05rem;margin:2px 4px 12px;display:flex;align-items:center;gap:8px}
+  .stage3d{position:relative;border-radius:16px;overflow:hidden;background:#000;touch-action:none;cursor:grab;user-select:none}
+  .stage3d:active{cursor:grabbing}
+  .stage3d canvas{display:block;width:100%}
+  .hint3d{
+    position:absolute;bottom:10px;left:50%;transform:translateX(-50%);
+    font-size:.7rem;font-weight:700;white-space:nowrap;
+    background:rgba(8,14,9,.7);backdrop-filter:blur(6px);
+    padding:6px 13px;border-radius:99px;color:var(--cream);
+    pointer-events:none;transition:opacity .4s;
+  }
+  .rotor{width:100%;margin-top:12px;accent-color:var(--terra)}
+  .compo{display:flex;height:10px;border-radius:99px;overflow:hidden;margin-top:10px;background:rgba(240,234,216,.07)}
+  .compo i{height:100%;transition:width .8s cubic-bezier(.22,1,.36,1)}
+  .leyenda{display:flex;gap:14px;font-size:.68rem;color:var(--muted);margin-top:9px;flex-wrap:wrap}
+  .leyenda b{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+
+  /* esquinas de visor + línea de escaneo */
+  .visor{position:absolute;inset:0;pointer-events:none;opacity:0;transition:.3s}
+  .escaneando .visor{opacity:1}
+  .visor i{
+    position:absolute;width:34px;height:34px;border:3px solid var(--sage);border-radius:6px;
+  }
+  .visor i:nth-child(1){top:16px;left:16px;border-right:none;border-bottom:none}
+  .visor i:nth-child(2){top:16px;right:16px;border-left:none;border-bottom:none}
+  .visor i:nth-child(3){bottom:16px;left:16px;border-right:none;border-top:none}
+  .visor i:nth-child(4){bottom:16px;right:16px;border-left:none;border-top:none}
+  .linea-escaneo{
+    position:absolute;left:6%;right:6%;height:3px;border-radius:99px;
+    background:linear-gradient(90deg,transparent,var(--sage),transparent);
+    box-shadow:0 0 18px 4px rgba(168,201,138,.45);
+    animation:escanea 1.6s ease-in-out infinite alternate;
+  }
+  @keyframes escanea{from{top:10%}to{top:88%}}
+
+  .fila-botones{display:flex;gap:10px;margin-top:14px}
+  .btn{
+    flex:1;border:none;cursor:pointer;font-family:var(--font-body);
+    padding:15px 18px;border-radius:18px;font-size:.92rem;font-weight:700;letter-spacing:.01em;
+    transition:.25s;
+  }
+  .btn-primario{
+    background:linear-gradient(135deg,var(--terra),#c75f38);
+    color:#fff5ec;
+    box-shadow:0 10px 26px -10px rgba(224,120,79,.55);
+  }
+  .btn-primario:hover{transform:translateY(-2px);box-shadow:0 14px 30px -10px rgba(224,120,79,.65)}
+  .btn-primario:disabled{opacity:.45;transform:none;box-shadow:none;cursor:not-allowed}
+  .btn-fantasma{
+    background:transparent;color:var(--muted);border:1px solid var(--line);
+  }
+  .btn-fantasma:hover{color:var(--cream);background:var(--surface)}
+
+  .progreso{display:none;margin-top:16px}
+  .escaneando-info .progreso{display:block}
+  .progreso .texto{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);margin-bottom:8px}
+  .progreso .pista{height:6px;border-radius:99px;background:rgba(240,234,216,.08);overflow:hidden}
+  .progreso .relleno{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--leaf),var(--sage));transition:width .2s}
+
+  .resultado{display:none;margin-top:18px;animation:sube .5s cubic-bezier(.22,1,.36,1) both}
+  .resultado.visible{display:block}
+  .resultado-cab{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+  .resultado-cab .emoji{
+    width:52px;height:52px;border-radius:18px;font-size:1.6rem;
+    background:rgba(127,176,105,.14);display:grid;place-items:center;
+  }
+  .resultado-cab h3{font-family:var(--font-display);font-weight:500;font-size:1.25rem}
+  .resultado-cab .latin{font-style:italic;font-size:.78rem;color:var(--muted);font-family:var(--font-display)}
+  .confianza{
+    margin-left:auto;font-size:.7rem;font-weight:700;color:var(--sage);
+    background:rgba(127,176,105,.13);border:1px solid rgba(127,176,105,.3);
+    padding:5px 10px;border-radius:99px;white-space:nowrap;
+  }
+  .datos-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .dato{
+    background:rgba(240,234,216,.04);border:1px solid var(--line);
+    border-radius:16px;padding:12px;
+  }
+  .dato span{display:block;font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:4px}
+  .dato b{font-size:.86rem;font-weight:700}
+  .nota-demo{
+    margin-top:12px;font-size:.7rem;color:var(--faint);line-height:1.5;
+    border-left:2px solid var(--line);padding-left:10px;
+  }
+
+  /* ---------- HUMEDAD ---------- */
+  .badge-sensor{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:.72rem;font-weight:700;letter-spacing:.04em;
+    background:rgba(232,176,75,.1);border:1px solid rgba(232,176,75,.3);color:var(--amber);
+    padding:7px 13px;border-radius:99px;margin-bottom:18px;
+  }
+  .badge-sensor .punto{
+    width:8px;height:8px;border-radius:50%;background:var(--amber);
+    animation:late 1.8s infinite;
+  }
+  .badge-sensor.conectado{background:rgba(127,176,105,.1);border-color:rgba(127,176,105,.35);color:var(--sage)}
+  .badge-sensor.conectado .punto{background:var(--leaf)}
+
+  .gauge-card{display:flex;flex-direction:column;align-items:center;padding:26px 18px 20px}
+  .gauge-wrap{position:relative;width:230px;height:130px}
+  .gauge-wrap svg{width:100%;height:auto;overflow:visible}
+  .gauge-fondo{fill:none;stroke:rgba(240,234,216,.08);stroke-width:16;stroke-linecap:round}
+  .gauge-valor{
+    fill:none;stroke:url(#gradGauge);stroke-width:16;stroke-linecap:round;
+    transition:stroke-dashoffset 1.2s cubic-bezier(.22,1,.36,1);
+    filter:drop-shadow(0 0 8px rgba(168,201,138,.35));
+  }
+  .gauge-centro{
+    position:absolute;left:0;right:0;bottom:0;text-align:center;
+  }
+  .gauge-centro b{
+    font-family:var(--font-display);font-size:2.6rem;font-weight:550;line-height:1;
+    font-variation-settings:"opsz" 80;white-space:nowrap;
+  }
+  .gauge-centro b span{display:inline;font-size:inherit;color:inherit}
+  .gauge-centro b small{font-size:1.2rem;color:var(--muted)}
+  .gauge-centro > span{display:block;font-size:.75rem;color:var(--muted);margin-top:4px}
+  .gauge-estado{
+    margin-top:14px;font-size:.8rem;font-weight:700;padding:7px 16px;border-radius:99px;
+    background:rgba(127,176,105,.12);color:var(--sage);border:1px solid rgba(127,176,105,.3);
+  }
+
+  .historial{margin-top:16px}
+  .historial h3{font-family:var(--font-display);font-weight:500;font-size:1.05rem;margin-bottom:14px}
+  .barras{display:flex;align-items:flex-end;gap:10px;height:110px}
+  .barra{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end}
+  .barra i{
+    width:100%;border-radius:9px 9px 4px 4px;
+    background:linear-gradient(180deg,var(--sage),rgba(127,176,105,.35));
+    min-height:8px;
+    animation:crece .9s cubic-bezier(.22,1,.36,1) both;
+    transform-origin:bottom;
+  }
+  .barra:nth-child(2) i{animation-delay:.05s}.barra:nth-child(3) i{animation-delay:.1s}
+  .barra:nth-child(4) i{animation-delay:.15s}.barra:nth-child(5) i{animation-delay:.2s}
+  .barra:nth-child(6) i{animation-delay:.25s}.barra:nth-child(7) i{animation-delay:.3s}
+  @keyframes crece{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+  .barra.hoy i{background:linear-gradient(180deg,var(--terra-soft),rgba(224,120,79,.4))}
+  .barra span{font-size:.66rem;color:var(--faint);letter-spacing:.05em}
+
+  .lista-plantas{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+  .fila-planta{
+    display:flex;align-items:center;gap:13px;
+    background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:13px 15px;
+  }
+  .fila-planta .em{font-size:1.4rem}
+  .fila-planta .info{flex:1}
+  .fila-planta .info b{display:block;font-size:.88rem}
+  .fila-planta .info span{font-size:.7rem;color:var(--muted)}
+  .fila-planta .pct{font-family:var(--font-display);font-size:1.1rem;font-weight:600;color:var(--sage)}
+  .fila-planta.seca .pct{color:var(--amber)}
+
+  /* ---------- SALUD / PLAGAS ---------- */
+  .estado-salud{
+    display:flex;gap:14px;align-items:center;
+    background:linear-gradient(150deg,rgba(127,176,105,.16),rgba(127,176,105,.04));
+    border:1px solid rgba(127,176,105,.3);
+  }
+  .estado-salud .escudo{font-size:2rem}
+  .estado-salud h3{font-family:var(--font-display);font-weight:500;font-size:1.1rem;margin-bottom:3px}
+  .estado-salud p{font-size:.78rem;color:var(--muted);line-height:1.45}
+
+  .plagas-lista{margin-top:18px;display:flex;flex-direction:column;gap:10px}
+  .plaga{
+    background:var(--surface);border:1px solid var(--line);border-radius:18px;
+    overflow:hidden;
+  }
+  .plaga-cab{
+    display:flex;align-items:center;gap:13px;padding:14px 16px;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .plaga-cab .em{font-size:1.3rem}
+  .plaga-cab b{flex:1;font-size:.9rem}
+  .sev{
+    font-size:.64rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    padding:4px 9px;border-radius:99px;
+  }
+  .sev.alta{background:rgba(224,99,99,.13);color:var(--danger);border:1px solid rgba(224,99,99,.3)}
+  .sev.media{background:rgba(232,176,75,.12);color:var(--amber);border:1px solid rgba(232,176,75,.3)}
+  .sev.baja{background:rgba(127,176,105,.12);color:var(--sage);border:1px solid rgba(127,176,105,.3)}
+  .plaga-cab .flecha{color:var(--faint);transition:transform .3s;font-size:.8rem}
+  .plaga.abierta .flecha{transform:rotate(180deg)}
+  .plaga-cuerpo{
+    max-height:0;overflow:hidden;transition:max-height .4s ease;
+  }
+  .plaga.abierta .plaga-cuerpo{max-height:240px}
+  .plaga-cuerpo div{
+    padding:0 16px 15px;font-size:.8rem;color:var(--muted);line-height:1.55;
+  }
+  .plaga-cuerpo b{color:var(--sage);font-size:.78rem}
+
+  /* ---------- barra de pestañas ---------- */
+  nav.tabbar{
+    position:absolute;left:14px;right:14px;bottom:max(14px, env(safe-area-inset-bottom));
+    z-index:20;
+    background:rgba(10,20,13,.82);
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    border:1px solid rgba(240,234,216,.1);
+    border-radius:26px;
+    display:flex;
+    padding:8px;
+    box-shadow:0 18px 40px -12px rgba(0,0,0,.7);
+  }
+  .tab{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+    padding:9px 4px;border:none;background:transparent;cursor:pointer;
+    color:var(--faint);font-family:var(--font-body);font-size:.62rem;font-weight:700;letter-spacing:.05em;
+    border-radius:18px;transition:.3s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .tab svg{width:21px;height:21px;transition:.3s}
+  .tab.activa{color:var(--cream);background:rgba(127,176,105,.14)}
+  .tab.activa svg{color:var(--sage);transform:translateY(-1px)}
+  .tab.destacada{
+    color:#fff5ec;
+  }
+  .tab.destacada .aro{
+    width:44px;height:44px;margin-top:-26px;border-radius:50%;
+    background:linear-gradient(135deg,var(--terra),#c75f38);
+    display:grid;place-items:center;
+    box-shadow:0 10px 24px -6px rgba(224,120,79,.6), 0 0 0 5px var(--bg);
+    transition:.3s;
+  }
+  .tab.destacada:hover .aro{transform:translateY(-3px)}
+  .tab.destacada svg{width:20px;height:20px;color:#fff5ec}
+
+  /* ---------- toast ---------- */
+  .toast{
+    position:absolute;left:50%;bottom:104px;transform:translate(-50%,20px);
+    z-index:60;opacity:0;pointer-events:none;
+    background:var(--surface-3);border:1px solid var(--line);color:var(--cream);
+    font-size:.8rem;font-weight:600;padding:12px 18px;border-radius:16px;
+    box-shadow:0 14px 34px -8px rgba(0,0,0,.6);
+    transition:.35s cubic-bezier(.22,1,.36,1);
+    max-width:85%;text-align:center;line-height:1.4;
+  }
+  .toast.visible{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- hojas decorativas -->
+  <svg class="bg-leaf uno" viewBox="0 0 100 100" fill="none"><path d="M50 5 C20 25 10 60 50 95 C90 60 80 25 50 5 Z M50 15 L50 85" stroke="#a8c98a" stroke-width="2"/></svg>
+  <svg class="bg-leaf dos" viewBox="0 0 100 100" fill="none"><path d="M50 5 C20 25 10 60 50 95 C90 60 80 25 50 5 Z M50 15 L50 85 M50 40 L30 30 M50 40 L70 30 M50 60 L28 48 M50 60 L72 48" stroke="#a8c98a" stroke-width="2"/></svg>
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a8c98a" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 22 C12 14 12 10 12 8"/>
+          <path d="M12 8 C12 4 9 2 5 2 C5 6 8 9 12 8 Z"/>
+          <path d="M12 13 C12 10 15 8 19 8 C19 12 16 14 12 13 Z"/>
+        </svg>
+      </div>
+      <h1>Fo<em>l</em>ia</h1>
+    </div>
+    <button class="icon-btn" onclick="toast('Sin notificaciones nuevas 🌿')" aria-label="Notificaciones">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+    </button>
+  </header>
+
+  <main>
+
+    <!-- ============ INICIO ============ -->
+    <section class="page activa" id="pag-inicio">
+      <p class="saludo reveal" id="saludo">Buenos días 🌤️</p>
+      <h2 class="titulo reveal">Tu jardín está <em>casi</em> en su mejor momento</h2>
+
+      <div class="stats reveal">
+        <div class="stat"><b>4</b><span>Plantas</span></div>
+        <div class="stat alerta"><b>1</b><span>Alerta</span></div>
+        <div class="stat hum"><b id="stat-hum">62%</b><span>Hum. media</span></div>
+      </div>
+
+      <div class="seccion-label reveal">
+        <h3>Mis plantas</h3>
+        <a onclick="toast('Pronto podrás gestionar tu colección completa')">Ver todas</a>
+      </div>
+
+      <div class="carrusel reveal">
+        <div class="planta-card">
+          <span class="planta-emoji">🪴</span>
+          <h4>Monstera</h4><p>Sala · 2 años</p>
+          <div class="mini-hum"><div class="mini-barra"><i style="width:71%"></i></div>71%</div>
+        </div>
+        <div class="planta-card">
+          <span class="alerta-dot"></span>
+          <span class="planta-emoji">🌵</span>
+          <h4>Suculenta</h4><p>Ventana · 8 meses</p>
+          <div class="mini-hum"><div class="mini-barra"><i style="width:24%"></i></div>24%</div>
+        </div>
+        <div class="planta-card">
+          <span class="planta-emoji">🌿</span>
+          <h4>Potus</h4><p>Cocina · 1 año</p>
+          <div class="mini-hum"><div class="mini-barra"><i style="width:65%"></i></div>65%</div>
+        </div>
+        <div class="planta-card">
+          <span class="planta-emoji">🌱</span>
+          <h4>Albahaca</h4><p>Balcón · 3 meses</p>
+          <div class="mini-hum"><div class="mini-barra"><i style="width:58%"></i></div>58%</div>
+        </div>
+      </div>
+
+      <div class="card tip-card reveal">
+        <div class="tip-icono">💡</div>
+        <div>
+          <h4>Consejo del día</h4>
+          <p>Tu suculenta lleva 12 días sin riego y su sustrato marca 24%. Riégala con poca agua y deja drenar bien la maceta.</p>
+        </div>
+      </div>
+
+      <div class="accesos reveal">
+        <div class="acceso" onclick="irA('escanear')">
+          <div class="ic">🎥</div>
+          <b>Escáner 3D</b>
+          <span>Graba un video y vela en 3D</span>
+        </div>
+        <div class="acceso" onclick="irA('salud')">
+          <div class="ic">🛡️</div>
+          <b>Revisar plagas</b>
+          <span>Detecta problemas a tiempo</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ESCÁNER ============ -->
+    <section class="page" id="pag-escanear">
+      <p class="kicker reveal">Escáner 3D</p>
+      <h2 class="titulo reveal">Escanea tu planta en <em>3D</em></h2>
+
+      <div class="reveal escaneando-info" id="bloque-escaner">
+        <label class="zona-subida" id="zona" for="inputVideo">
+          <div class="gran-icono" id="iconoSubida">🎥</div>
+          <h3 id="zonaTitulo">Graba un video de tu planta</h3>
+          <p id="zonaTexto">Camina despacio alrededor de la planta grabando 10–20 segundos. Con ese video crearemos su vista 3D y analizaremos su salud.</p>
+          <span class="formatos">MP4 · MOV · WEBM</span>
+          <video id="previa" playsinline muted loop hidden></video>
+          <div class="visor"><i></i><i></i><i></i><i></i><div class="linea-escaneo"></div></div>
+        </label>
+        <input type="file" id="inputVideo" accept="video/*" capture="environment">
+
+        <div class="fila-botones">
+          <button class="btn btn-fantasma" id="btnCambiar" onclick="reiniciarEscaner()" style="display:none">Cambiar video</button>
+          <button class="btn btn-primario" id="btnAnalizar" disabled onclick="analizar()">Escanear en 3D</button>
+        </div>
+
+        <div class="progreso" id="progreso">
+          <div class="texto"><span id="faseTexto">Extrayendo fotogramas…</span><span id="pct">0%</span></div>
+          <div class="pista"><div class="relleno" id="relleno"></div></div>
+        </div>
+      </div>
+
+      <div class="card visor3d" id="visor3d">
+        <h3>🪴 Vista 3D de tu planta</h3>
+        <div class="stage3d" id="stage3d">
+          <canvas id="lienzo3d"></canvas>
+          <div class="hint3d" id="hint3d">⟲ Arrastra para girar</div>
+        </div>
+        <input type="range" class="rotor" id="rotor" min="0" max="27" value="0" aria-label="Girar vista 3D">
+      </div>
+
+      <div class="card resultado" id="resultado">
+        <div class="resultado-cab">
+          <div class="emoji" id="resEmoji">🪴</div>
+          <div>
+            <h3 id="resNombre">—</h3>
+            <div class="latin" id="resLatin">—</div>
+          </div>
+          <div class="confianza" id="resConf">—</div>
+        </div>
+        <div class="datos-grid">
+          <div class="dato"><span>Salud general</span><b id="resSalud">—</b></div>
+          <div class="dato"><span>Hojas sanas</span><b id="resVerde">—</b></div>
+          <div class="dato"><span>Hojas amarillas / secas</span><b id="resAmarillo">—</b></div>
+          <div class="dato"><span>Señales de plagas</span><b id="resPlagas">—</b></div>
+        </div>
+        <div class="compo" id="compo"></div>
+        <div class="leyenda">
+          <span><b style="background:#7fb069"></b>Follaje sano</span>
+          <span><b style="background:#e8b04b"></b>Amarillento / seco</span>
+          <span><b style="background:#ece6d4"></b>Motas claras</span>
+          <span><b style="background:#3a4a3e"></b>Fondo</span>
+        </div>
+        <p class="nota-demo">🔬 La salud se calcula analizando el color de los píxeles de tu video. La identificación de especie y el sensor de humedad se conectarán próximamente.</p>
+      </div>
+    </section>
+
+    <!-- ============ HUMEDAD ============ -->
+    <section class="page" id="pag-humedad">
+      <p class="kicker reveal">Sensor de sustrato</p>
+      <h2 class="titulo reveal">Nivel de <em>humedad</em></h2>
+
+      <div class="reveal">
+        <span class="badge-sensor" id="badgeSensor"><span class="punto"></span> Arduino no conectado · modo demo</span>
+      </div>
+
+      <div class="card gauge-card reveal">
+        <div class="gauge-wrap">
+          <svg viewBox="0 0 230 130">
+            <defs>
+              <linearGradient id="gradGauge" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#e0784f"/>
+                <stop offset="55%" stop-color="#e8b04b"/>
+                <stop offset="100%" stop-color="#a8c98a"/>
+              </linearGradient>
+            </defs>
+            <path class="gauge-fondo" d="M 25 120 A 90 90 0 0 1 205 120"/>
+            <path class="gauge-valor" id="arcoGauge" d="M 25 120 A 90 90 0 0 1 205 120"
+                  stroke-dasharray="282.7" stroke-dashoffset="282.7"/>
+          </svg>
+          <div class="gauge-centro">
+            <b><span id="valorHum">0</span><small>%</small></b>
+            <span>humedad del sustrato</span>
+          </div>
+        </div>
+        <div class="gauge-estado" id="estadoHum">Óptima 🌿</div>
+      </div>
+
+      <div class="card historial reveal">
+        <h3>Última semana</h3>
+        <div class="barras">
+          <div class="barra"><i style="height:55%"></i><span>L</span></div>
+          <div class="barra"><i style="height:48%"></i><span>M</span></div>
+          <div class="barra"><i style="height:70%"></i><span>X</span></div>
+          <div class="barra"><i style="height:64%"></i><span>J</span></div>
+          <div class="barra"><i style="height:40%"></i><span>V</span></div>
+          <div class="barra"><i style="height:52%"></i><span>S</span></div>
+          <div class="barra hoy"><i style="height:62%"></i><span>HOY</span></div>
+        </div>
+      </div>
+
+      <div class="lista-plantas reveal">
+        <div class="fila-planta">
+          <span class="em">🪴</span>
+          <div class="info"><b>Monstera</b><span>Regada hace 2 días</span></div>
+          <span class="pct">71%</span>
+        </div>
+        <div class="fila-planta seca">
+          <span class="em">🌵</span>
+          <div class="info"><b>Suculenta</b><span>Regada hace 12 días · necesita agua</span></div>
+          <span class="pct">24%</span>
+        </div>
+        <div class="fila-planta">
+          <span class="em">🌿</span>
+          <div class="info"><b>Potus</b><span>Regada hace 3 días</span></div>
+          <span class="pct">65%</span>
+        </div>
+      </div>
+
+      <div class="fila-botones reveal">
+        <button class="btn btn-fantasma" onclick="simularLectura()">Simular lectura</button>
+        <button class="btn btn-primario" onclick="toast('🔌 Próximamente: conexión con tu Arduino vía WiFi o puerto serie')">Conectar sensor</button>
+      </div>
+    </section>
+
+    <!-- ============ SALUD / PLAGAS ============ -->
+    <section class="page" id="pag-salud">
+      <p class="kicker reveal">Diagnóstico</p>
+      <h2 class="titulo reveal">Salud y <em>plagas</em></h2>
+
+      <div class="card estado-salud reveal" id="cardSalud">
+        <div class="escudo">🛡️</div>
+        <div>
+          <h3 id="saludTitulo">Sin plagas detectadas</h3>
+          <p id="saludTexto">Tu último escaneo no muestra señales de plagas. Escanea tus plantas cada semana para detectar problemas a tiempo.</p>
+        </div>
+      </div>
+
+      <div class="fila-botones reveal">
+        <button class="btn btn-primario" onclick="irA('escanear')">📷 Escanear ahora</button>
+      </div>
+
+      <div class="seccion-label reveal" style="margin-top:22px">
+        <h3>Guía de plagas comunes</h3>
+      </div>
+
+      <div class="plagas-lista reveal">
+        <div class="plaga">
+          <div class="plaga-cab" onclick="togglePlaga(this)">
+            <span class="em">🕷️</span><b>Araña roja</b>
+            <span class="sev alta">Alta</span>
+            <span class="flecha">▾</span>
+          </div>
+          <div class="plaga-cuerpo"><div>
+            Telarañas finas y puntos amarillos en las hojas. Aparece con ambiente seco.<br>
+            <b>Tratamiento:</b> aumenta la humedad ambiental y aplica jabón potásico cada 5 días.
+          </div></div>
+        </div>
+        <div class="plaga">
+          <div class="plaga-cab" onclick="togglePlaga(this)">
+            <span class="em">🐛</span><b>Cochinilla algodonosa</b>
+            <span class="sev alta">Alta</span>
+            <span class="flecha">▾</span>
+          </div>
+          <div class="plaga-cuerpo"><div>
+            Motas blancas algodonosas en tallos y envés de las hojas.<br>
+            <b>Tratamiento:</b> retíralas con bastoncillo y alcohol, luego aceite de neem semanal.
+          </div></div>
+        </div>
+        <div class="plaga">
+          <div class="plaga-cab" onclick="togglePlaga(this)">
+            <span class="em">🦟</span><b>Mosca blanca</b>
+            <span class="sev media">Media</span>
+            <span class="flecha">▾</span>
+          </div>
+          <div class="plaga-cuerpo"><div>
+            Pequeños insectos blancos que vuelan al mover la planta.<br>
+            <b>Tratamiento:</b> trampas amarillas adhesivas y jabón potásico en el envés.
+          </div></div>
+        </div>
+        <div class="plaga">
+          <div class="plaga-cab" onclick="togglePlaga(this)">
+            <span class="em">🐜</span><b>Pulgón</b>
+            <span class="sev media">Media</span>
+            <span class="flecha">▾</span>
+          </div>
+          <div class="plaga-cuerpo"><div>
+            Colonias verdes o negras en brotes tiernos; hojas pegajosas.<br>
+            <b>Tratamiento:</b> chorro de agua a presión suave y aceite de neem cada 7 días.
+          </div></div>
+        </div>
+        <div class="plaga">
+          <div class="plaga-cab" onclick="togglePlaga(this)">
+            <span class="em">🍄</span><b>Hongos (oídio)</b>
+            <span class="sev baja">Baja</span>
+            <span class="flecha">▾</span>
+          </div>
+          <div class="plaga-cuerpo"><div>
+            Polvo blanco sobre las hojas, normalmente por exceso de humedad y poca ventilación.<br>
+            <b>Tratamiento:</b> mejora la ventilación, retira hojas afectadas y aplica fungicida de azufre.
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ NAVEGACIÓN ============ -->
+  <nav class="tabbar">
+    <button class="tab activa" data-pag="inicio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+      Inicio
+    </button>
+    <button class="tab" data-pag="humedad">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.7 C16.5 8 19 11.5 19 15 a7 7 0 0 1-14 0 c0-3.5 2.5-7 7-12.3Z"/></svg>
+      Humedad
+    </button>
+    <button class="tab destacada" data-pag="escanear">
+      <span class="aro">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V5a2 2 0 0 1 2-2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M21 16v3a2 2 0 0 1-2 2h-3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M4 12h16"/></svg>
+      </span>
+      Escanear
+    </button>
+    <button class="tab" data-pag="salud">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 7.7 8 9 4.5-1.3 8-4 8-9V6Z"/><path d="m9 12 2 2 4-4"/></svg>
+      Salud
+    </button>
+    <button class="tab" data-pag="inicio" onclick="toast('Perfil disponible en la próxima versión 🌱')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></svg>
+      Perfil
+    </button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ================= navegación ================= */
+const tabs = document.querySelectorAll('.tab[data-pag]');
+function irA(nombre){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('activa'));
+  document.getElementById('pag-'+nombre).classList.add('activa');
+  tabs.forEach(t=>t.classList.toggle('activa', t.dataset.pag===nombre && !t.classList.contains('destacada')));
+  if(nombre==='humedad') animarGauge(humedadActual);
+}
+tabs.forEach(t=>{
+  if(t.textContent.trim()==='Perfil') return; // el de perfil solo muestra toast
+  t.addEventListener('click',()=>irA(t.dataset.pag));
+});
+
+/* saludo según hora */
+const h = new Date().getHours();
+document.getElementById('saludo').textContent =
+  h<12 ? 'Buenos días 🌤️' : h<20 ? 'Buenas tardes ☀️' : 'Buenas noches 🌙';
+
+/* ================= toast ================= */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('visible'), 3200);
+}
+
+/* ================= escáner 3D por video ================= */
+const inputVideo = document.getElementById('inputVideo');
+const zona       = document.getElementById('zona');
+const previa     = document.getElementById('previa');
+const btnAnalizar= document.getElementById('btnAnalizar');
+const btnCambiar = document.getElementById('btnCambiar');
+let videoCargado = false;
+let frames = [];            /* canvases del turntable 3D */
+let escaneoEnCurso = false;
+
+inputVideo.addEventListener('change', e=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  previa.src = URL.createObjectURL(f);
+  previa.hidden = false;
+  previa.play().catch(()=>{});
+  zona.classList.add('con-foto');
+  document.getElementById('iconoSubida').style.display='none';
+  document.getElementById('zonaTitulo').style.display='none';
+  document.getElementById('zonaTexto').style.display='none';
+  document.querySelector('.formatos').style.display='none';
+  videoCargado = true;
+  btnAnalizar.disabled = false;
+  btnCambiar.style.display='block';
+  document.getElementById('resultado').classList.remove('visible');
+  document.getElementById('visor3d').classList.remove('visible');
+});
+
+function reiniciarEscaner(){
+  inputVideo.value='';
+  previa.pause(); previa.hidden = true; previa.removeAttribute('src'); previa.load();
+  zona.classList.remove('con-foto');
+  document.getElementById('iconoSubida').style.display='';
+  document.getElementById('zonaTitulo').style.display='';
+  document.getElementById('zonaTexto').style.display='';
+  document.querySelector('.formatos').style.display='';
+  videoCargado=false;
+  btnAnalizar.disabled = true;
+  btnCambiar.style.display='none';
+  document.getElementById('resultado').classList.remove('visible');
+  document.getElementById('visor3d').classList.remove('visible');
+}
+
+function buscarTiempo(video, t){
+  return new Promise(res=>{
+    const fin = ()=>{ video.removeEventListener('seeked', fin); res(); };
+    video.addEventListener('seeked', fin);
+    video.currentTime = Math.min(t, Math.max(0, video.duration - .05));
+  });
+}
+
+/* clasifica un píxel: 1 sano, 2 amarillo/seco, 3 mota clara, 0 fondo */
+function clasificarPixel(r,g,b){
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  if(max>215 && (max-min)<35) return 3;                       /* blanco: posible cochinilla/oídio */
+  if(g>50 && g>=r*1.06 && g>=b*1.06) return 1;                /* verde dominante */
+  if(r>90 && r>=g && g>b*1.15 && (r-b)>40) return 2;          /* amarillo/marrón */
+  return 0;
+}
+
+async function analizar(){
+  if(!videoCargado || escaneoEnCurso) return;
+  escaneoEnCurso = true;
+  zona.classList.add('escaneando');
+  btnAnalizar.disabled = true;
+  document.getElementById('bloque-escaner').classList.add('escaneando-info');
+  document.getElementById('resultado').classList.remove('visible');
+  document.getElementById('visor3d').classList.remove('visible');
+
+  const relleno   = document.getElementById('relleno');
+  const pct       = document.getElementById('pct');
+  const faseTexto = document.getElementById('faseTexto');
+  const fases = ['Extrayendo fotogramas…','Reconstruyendo vista 3D…','Analizando color del follaje…','Buscando señales de plagas…','Generando informe…'];
+
+  try{
+    previa.pause();
+    if(!previa.duration || isNaN(previa.duration)){
+      await new Promise(res=>previa.addEventListener('loadedmetadata', res, {once:true}));
+    }
+    const N = 28;                                   /* fotogramas del giro 360° */
+    const W = 480;
+    const escala = W / previa.videoWidth;
+    const H = Math.round(previa.videoHeight * escala);
+    frames = [];
+    const conteo = {sano:0, seco:0, mota:0, fondo:0};
+
+    for(let i=0;i<N;i++){
+      const t = previa.duration * (0.02 + 0.96 * i/(N-1));
+      await buscarTiempo(previa, t);
+      const cv = document.createElement('canvas');
+      cv.width = W; cv.height = H;
+      const cx = cv.getContext('2d', {willReadFrequently:true});
+      cx.drawImage(previa, 0, 0, W, H);
+      frames.push(cv);
+
+      /* análisis de color real (muestreo 1 de cada 6 píxeles) */
+      const datos = cx.getImageData(0,0,W,H).data;
+      for(let p=0; p<datos.length; p+=24){
+        const c = clasificarPixel(datos[p], datos[p+1], datos[p+2]);
+        if(c===1) conteo.sano++;
+        else if(c===2) conteo.seco++;
+        else if(c===3) conteo.mota++;
+        else conteo.fondo++;
+      }
+      const prog = Math.round(((i+1)/N)*100);
+      relleno.style.width = prog+'%';
+      pct.textContent = prog+'%';
+      faseTexto.textContent = fases[Math.min(Math.floor(prog/21), fases.length-1)];
+    }
+    mostrarResultado(conteo);
+  }catch(err){
+    console.error(err);
+    toast('⚠️ No se pudo leer el video. Prueba con otro formato (MP4/WEBM).');
+    zona.classList.remove('escaneando');
+    document.getElementById('bloque-escaner').classList.remove('escaneando-info');
+    btnAnalizar.disabled = false;
+  }
+  escaneoEnCurso = false;
+}
+
+function mostrarResultado(c){
+  zona.classList.remove('escaneando');
+  document.getElementById('bloque-escaner').classList.remove('escaneando-info');
+  btnAnalizar.disabled = false;
+
+  const planta = c.sano + c.seco + c.mota;
+  const total  = planta + c.fondo;
+  const pSano  = planta ? Math.round(c.sano/planta*100) : 0;
+  const pSeco  = planta ? Math.round(c.seco/planta*100) : 0;
+  const pMota  = planta ? +(c.mota/planta*100).toFixed(1) : 0;
+  const hayPlanta = planta/total > 0.04;
+  const hayPlagas = pMota > 1.6;
+  const salud = !hayPlanta ? 0 : Math.max(0, Math.min(100, Math.round(pSano - pMota*4)));
+
+  document.getElementById('resEmoji').textContent  = hayPlanta ? '🪴' : '❓';
+  document.getElementById('resNombre').textContent = hayPlanta ? 'Tu planta' : 'No se detectó planta';
+  document.getElementById('resLatin').textContent  = hayPlanta ? 'Escaneo 3D · '+frames.length+' fotogramas' : 'Acércate más e intenta de nuevo';
+  document.getElementById('resConf').textContent   = hayPlanta ? 'Salud '+salud+'%' : '—';
+  document.getElementById('resSalud').textContent  = !hayPlanta ? '—' : salud>=75 ? 'Buena 🌿' : salud>=50 ? 'Regular 🍂' : 'Necesita cuidados ⚠️';
+  document.getElementById('resVerde').textContent  = hayPlanta ? pSano+'% del follaje' : '—';
+  document.getElementById('resAmarillo').textContent = hayPlanta ? pSeco+'% del follaje' : '—';
+  document.getElementById('resPlagas').textContent = !hayPlanta ? '—' : hayPlagas ? 'Motas claras ('+pMota+'%) ⚠️' : 'Sin señales visibles';
+
+  /* barra de composición */
+  const compo = document.getElementById('compo');
+  const pPlanta = planta/total*100;
+  compo.innerHTML =
+    '<i style="background:#7fb069;width:'+(pPlanta*pSano/100)+'%"></i>'+
+    '<i style="background:#e8b04b;width:'+(pPlanta*pSeco/100)+'%"></i>'+
+    '<i style="background:#ece6d4;width:'+(pPlanta*pMota/100)+'%"></i>'+
+    '<i style="background:#3a4a3e;width:'+(100-pPlanta)+'%"></i>';
+
+  iniciarVisor3D();
+  document.getElementById('resultado').classList.add('visible');
+
+  /* sincroniza la sección de salud */
+  const st = document.getElementById('saludTitulo');
+  const sx = document.getElementById('saludTexto');
+  if(!hayPlanta){
+    st.textContent = 'Escaneo sin resultados';
+    sx.textContent = 'El último video no muestra suficiente follaje. Graba más cerca de la planta, con buena luz.';
+  }else if(hayPlagas){
+    st.textContent = 'Posibles motas claras detectadas ⚠️';
+    sx.textContent = 'El escaneo 3D encontró un '+pMota+'% de motas claras en el follaje, compatibles con cochinilla u oídio. Revisa la guía de abajo.';
+  }else if(pSeco > 25){
+    st.textContent = 'Follaje amarillento 🍂';
+    sx.textContent = 'Un '+pSeco+'% del follaje se ve amarillo o seco. Suele indicar exceso o falta de riego; revisa la sección Humedad.';
+  }else{
+    st.textContent = 'Sin plagas detectadas';
+    sx.textContent = 'Tu último escaneo 3D no muestra señales de plagas. Escanea tus plantas cada semana para detectar problemas a tiempo.';
+  }
+  toast(!hayPlanta ? '🤔 No se detectó follaje en el video' : hayPlagas ? '⚠️ Escaneo listo: revisa la sección Salud' : '✅ Escaneo 3D completado: salud '+salud+'%');
+}
+
+/* ---------- visor 3D (turntable) ---------- */
+const stage3d = document.getElementById('stage3d');
+const lienzo3d = document.getElementById('lienzo3d');
+const rotor = document.getElementById('rotor');
+let idx3d = 0, auto3d = null;
+
+function dibujarFrame(i){
+  if(!frames.length) return;
+  idx3d = ((i % frames.length) + frames.length) % frames.length;
+  const f = frames[idx3d];
+  if(lienzo3d.width !== f.width){ lienzo3d.width = f.width; lienzo3d.height = f.height; }
+  lienzo3d.getContext('2d').drawImage(f, 0, 0);
+  rotor.value = idx3d;
+}
+
+function iniciarVisor3D(){
+  document.getElementById('visor3d').classList.add('visible');
+  document.getElementById('hint3d').style.opacity = 1;
+  rotor.max = frames.length - 1;
+  dibujarFrame(0);
+  clearInterval(auto3d);
+  auto3d = setInterval(()=>dibujarFrame(idx3d+1), 130);   /* gira solo hasta que lo toques */
+}
+function detenerAuto(){
+  if(auto3d){ clearInterval(auto3d); auto3d = null; }
+  document.getElementById('hint3d').style.opacity = 0;
+}
+let arrastrando = false, xInicio = 0, idxInicio = 0;
+stage3d.addEventListener('pointerdown', e=>{
+  detenerAuto(); arrastrando = true; xInicio = e.clientX; idxInicio = idx3d;
+  stage3d.setPointerCapture(e.pointerId);
+});
+stage3d.addEventListener('pointermove', e=>{
+  if(!arrastrando || !frames.length) return;
+  const delta = Math.round((e.clientX - xInicio) / 12);   /* 12px por fotograma */
+  dibujarFrame(idxInicio + delta);
+});
+stage3d.addEventListener('pointerup', ()=>arrastrando=false);
+rotor.addEventListener('input', ()=>{ detenerAuto(); dibujarFrame(+rotor.value); });
+
+/* ================= humedad ================= */
+const LARGO_ARCO = 282.7;          /* longitud del arco del medidor */
+let humedadActual = 62;            /* valor demo inicial */
+
+function animarGauge(valor){
+  const arco = document.getElementById('arcoGauge');
+  arco.style.strokeDashoffset = LARGO_ARCO * (1 - valor/100);
+  document.getElementById('valorHum').textContent = valor;
+  document.getElementById('stat-hum').textContent = valor+'%';
+  const estado = document.getElementById('estadoHum');
+  if(valor < 30){ estado.textContent='Sustrato seco · riega pronto 🏜️'; estado.style.color='var(--amber)'; }
+  else if(valor < 45){ estado.textContent='Algo baja · vigílala 👀'; estado.style.color='var(--terra-soft)'; }
+  else if(valor <= 75){ estado.textContent='Óptima 🌿'; estado.style.color='var(--sage)'; }
+  else { estado.textContent='Muy húmeda · no riegues 💧'; estado.style.color='var(--muted)'; }
+}
+
+function simularLectura(){
+  humedadActual = 20 + Math.floor(Math.random()*65);
+  animarGauge(humedadActual);
+  toast('📡 Lectura simulada: '+humedadActual+'% de humedad');
+}
+
+/* ---------- CONEXIÓN ARDUINO (futuro) ----------
+   Cuando tengas tu sensor de humedad con Arduino + ESP32/ESP8266
+   exponiendo un endpoint HTTP, descomenta esto:
+
+   setInterval(async () => {
+     try {
+       const r = await fetch('http://IP_DE_TU_ARDUINO/humedad');
+       const { valor } = await r.json();           // ej. { "valor": 57 }
+       actualizarHumedad(valor);
+     } catch(e) { console.warn('Sensor sin conexión', e); }
+   }, 5000);
+
+   También puedes llamar manualmente desde la consola:
+   actualizarHumedad(57)
+------------------------------------------------- */
+function actualizarHumedad(valor){
+  humedadActual = Math.max(0, Math.min(100, Math.round(valor)));
+  const badge = document.getElementById('badgeSensor');
+  badge.classList.add('conectado');
+  badge.innerHTML = '<span class="punto"></span> Arduino conectado · datos en vivo';
+  animarGauge(humedadActual);
+}
+window.actualizarHumedad = actualizarHumedad;
+
+/* ================= plagas (acordeón) ================= */
+function togglePlaga(cab){
+  const item = cab.parentElement;
+  const abierta = item.classList.contains('abierta');
+  document.querySelectorAll('.plaga').forEach(p=>p.classList.remove('abierta'));
+  if(!abierta) item.classList.add('abierta');
+}
+
+/* arranque */
+setTimeout(()=>animarGauge(humedadActual), 600);
+
+/* ================= PWA ================= */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>

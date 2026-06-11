@@ -1,0 +1,17 @@
+{
+  "name": "Folia — Cuidado de plantas",
+  "short_name": "Folia",
+  "description": "Escanea tus plantas en 3D con video, controla la humedad del sustrato y detecta plagas a tiempo.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c1a12",
+  "theme_color": "#0c1a12",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

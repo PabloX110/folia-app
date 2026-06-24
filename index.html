@@ -532,7 +532,7 @@
 
       <div class="stats reveal">
         <div class="stat"><b id="statPlantasInicio">0</b><span>Plantas</span></div>
-        <div class="stat alerta"><b>1</b><span>Alerta</span></div>
+        <div class="stat alerta"><b id="statAlerta">0</b><span>Alerta</span></div>
         <div class="stat hum"><b id="stat-hum">62%</b><span>Hum. media</span></div>
       </div>
 
@@ -547,7 +547,7 @@
         <div class="tip-icono">💡</div>
         <div>
           <h4>Consejo del día</h4>
-          <p>Tu suculenta lleva 12 días sin riego y su sustrato marca 24%. Riégala con poca agua y deja drenar bien la maceta.</p>
+          <p id="tipTexto">Conecta tu sensor para ver consejos de riego en tiempo real. En general, riega cuando el sustrato baje del 40 %.</p>
         </div>
       </div>
 
@@ -1120,16 +1120,31 @@ let bombaSensor  = false;   // estado de la bomba según el ESP32
 
 function pintarBadgeSensor(){
   const badge = document.getElementById('badgeSensor');
-  if(!badge) return;
+  if(badge){
+    if(sensorActivo){
+      badge.classList.add('conectado');
+      badge.innerHTML = '<span class="punto"></span> Sensor conectado · bomba ' + (bombaSensor ? 'ON 💧' : 'OFF');
+    } else {
+      badge.classList.remove('conectado');
+      badge.innerHTML = '<span class="punto"></span> Sensor no conectado · modo demo';
+    }
+  }
+  actualizarConsejo();
+}
+
+/* Alerta y consejo del inicio, según la humedad real del sensor. */
+function actualizarConsejo(){
+  const al  = document.getElementById('statAlerta');
+  const tip = document.getElementById('tipTexto');
+  const seca = sensorActivo && humedadActual < 40;
+  if(al) al.textContent = seca ? '1' : '0';
+  if(!tip) return;
   if(sensorActivo){
-    badge.classList.add('conectado');
-    let txt = '<span class="punto"></span> Conectado';
-    if(tempSensor !== null && !isNaN(tempSensor)) txt += ' · ' + tempSensor.toFixed(1) + '°C';
-    txt += ' · bomba ' + (bombaSensor ? 'ON 💧' : 'OFF');
-    badge.innerHTML = txt;
+    if(humedadActual < 40)      tip.textContent = 'El sustrato está seco ('+humedadActual+'%). Riega con poca agua y deja drenar bien la maceta.';
+    else if(humedadActual > 70) tip.textContent = 'El sustrato está muy húmedo ('+humedadActual+'%). No riegues todavía, espera a que baje.';
+    else                        tip.textContent = 'La humedad del sustrato está en buen nivel ('+humedadActual+'%). 🌿';
   } else {
-    badge.classList.remove('conectado');
-    badge.innerHTML = '<span class="punto"></span> Arduino no conectado · modo demo';
+    tip.textContent = 'Conecta tu sensor para ver consejos de riego en tiempo real. En general, riega cuando el sustrato baje del 40 %.';
   }
 }
 
@@ -1161,6 +1176,9 @@ let bleRecibioDatos = false;
 let bleWatchdog = null;
 const bleDecoder = new TextDecoder('utf-8');
 
+let bleReconexiones      = 0;     // intentos de reconexión automática tras una caída
+let bleDesconexionManual = false; // el usuario pulsó "Desconectar"
+
 async function conectarBluetooth(){
   if(!navigator.bluetooth){
     const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
@@ -1173,77 +1191,91 @@ async function conectarBluetooth(){
   }
   try {
     toast('🔍 Buscando "Folia-Riego"…');
+    // Filtramos por NOMBRE (más fiable que por UUID, que a veces no cabe en el
+    // anuncio BLE). El servicio se declara en optionalServices para poder leerlo.
     bleDispositivo = await navigator.bluetooth.requestDevice({
-      filters: [{ services: [BLE_SERVICIO] }]
+      filters: [{ namePrefix: 'Folia' }],
+      optionalServices: [BLE_SERVICIO]
     });
-    bleDispositivo.addEventListener('gattserverdisconnected', alDesconectarBle);
+    bleDesconexionManual = false;
+    bleReconexiones = 0;
+    bleDispositivo.addEventListener('gattserverdisconnected', alPerderConexion);
+    await conectarGatt();
+  } catch(err){
+    if(err && err.name === 'NotFoundError') return;  // el usuario cerró el diálogo
+    console.warn('Conexión BLE fallida', err);
+    toast('No se pudo conectar: ' + (err.message || err));
+  }
+}
 
-    const server   = await bleDispositivo.gatt.connect();
-    const servicio = await server.getPrimaryService(BLE_SERVICIO);
+// Enlaza el GATT y se suscribe a las características. Marca "conectado" en cuanto
+// el GATT enlaza, aunque la primera lectura tarde un instante.
+async function conectarGatt(){
+  const server = await bleDispositivo.gatt.connect();
 
-    // Humedad (principal): mueve el gauge en vivo.
-    bleRecibioDatos = false;
+  sensorActivo = true;
+  bleRecibioDatos = false;
+  pintarBadgeSensor();
+  actualizarBotonesBle(true);
+  refrescarPerfil();
+  toast('🌿 Sensor conectado');
+
+  const servicio = await server.getPrimaryService(BLE_SERVICIO);
+
+  // Humedad (principal): mueve el gauge en vivo. Si falla, no tumba la conexión.
+  try {
     const cHum = await servicio.getCharacteristic(BLE_HUMEDAD);
-    await cHum.startNotifications();
     cHum.addEventListener('characteristicvaluechanged', ev => {
       const v = parseFloat(bleDecoder.decode(ev.target.value));
       if(!isNaN(v)){ bleRecibioDatos = true; actualizarHumedad(v); }
     });
-    // Lee el valor actual de inmediato, sin esperar a la primera notificación.
+    await cHum.startNotifications();
     try {
       const v0 = parseFloat(bleDecoder.decode(await cHum.readValue()));
       if(!isNaN(v0)){ bleRecibioDatos = true; actualizarHumedad(v0); }
     } catch(e){}
+  } catch(e){ console.warn('Sin característica de humedad', e); }
 
-    // Temperatura (opcional).
-    try {
-      const cTemp = await servicio.getCharacteristic(BLE_TEMP);
-      await cTemp.startNotifications();
-      cTemp.addEventListener('characteristicvaluechanged', ev => {
-        const v = parseFloat(bleDecoder.decode(ev.target.value));
-        if(!isNaN(v)){ tempSensor = v; pintarBadgeSensor(); }
-      });
-    } catch(e){ console.warn('Sin característica de temperatura', e); }
+  // Estado de la bomba (opcional).
+  try {
+    const cBomba = await servicio.getCharacteristic(BLE_BOMBA);
+    cBomba.addEventListener('characteristicvaluechanged', ev => {
+      bombaSensor = bleDecoder.decode(ev.target.value).trim() === '1';
+      pintarBadgeSensor();
+    });
+    await cBomba.startNotifications();
+  } catch(e){ console.warn('Sin característica de bomba', e); }
 
-    // Estado de la bomba (opcional).
-    try {
-      const cBomba = await servicio.getCharacteristic(BLE_BOMBA);
-      await cBomba.startNotifications();
-      cBomba.addEventListener('characteristicvaluechanged', ev => {
-        bombaSensor = bleDecoder.decode(ev.target.value).trim() === '1';
-        pintarBadgeSensor();
-      });
-    } catch(e){ console.warn('Sin característica de bomba', e); }
+  // Comando para regar manualmente (opcional).
+  try { bleCharComando = await servicio.getCharacteristic(BLE_COMANDO); }
+  catch(e){ bleCharComando = null; }
 
-    // Comando para regar manualmente (opcional).
-    try { bleCharComando = await servicio.getCharacteristic(BLE_COMANDO); }
-    catch(e){ bleCharComando = null; }
+  bleReconexiones = 0;  // conexión estable
 
-    sensorActivo = true;
-    pintarBadgeSensor();
-    actualizarBotonesBle(true);
-    refrescarPerfil();
-    toast('🌿 Sensor conectado por Bluetooth');
-
-    // Si en 7 s no llegó humedad válida, probablemente falta cablear el DHT22.
-    clearTimeout(bleWatchdog);
-    bleWatchdog = setTimeout(() => {
-      if(bleDispositivo && bleDispositivo.gatt.connected && !bleRecibioDatos){
-        toast('Conectado, pero el sensor no envía humedad. ¿Está cableado el DHT22 al ESP32 (DATA→GPIO4)?');
-      }
-    }, 7000);
-  } catch(err){
-    console.warn('Conexión BLE cancelada o fallida', err);
-    if(err && err.name !== 'NotFoundError') toast('No se pudo conectar: ' + (err.message || err));
-  }
+  // Si en 8 s no llega humedad válida, suele ser el AOUT mal conectado.
+  clearTimeout(bleWatchdog);
+  bleWatchdog = setTimeout(() => {
+    if(bleDispositivo && bleDispositivo.gatt.connected && !bleRecibioDatos){
+      toast('Conectado, pero no llega humedad. Revisa que el AOUT del sensor esté en GPIO34.');
+    }
+  }, 8000);
 }
 
-function alDesconectarBle(){
-  sensorActivo  = false;
-  tempSensor    = null;
-  bombaSensor   = false;
-  bleCharComando = null;
+async function alPerderConexion(){
   clearTimeout(bleWatchdog);
+  // Las caídas breves son normales en BLE: intentamos reconectar unas veces.
+  if(!bleDesconexionManual && bleDispositivo && bleReconexiones < 3){
+    bleReconexiones++;
+    try {
+      await new Promise(r => setTimeout(r, 600));
+      await conectarGatt();
+      return;  // reconectado
+    } catch(e){ /* si falla, se da por desconectado abajo */ }
+  }
+  sensorActivo   = false;
+  tempSensor     = null;
+  bombaSensor    = false;
+  bleCharComando = null;
   pintarBadgeSensor();
   actualizarBotonesBle(false);
   refrescarPerfil();
@@ -1251,8 +1283,9 @@ function alDesconectarBle(){
 }
 
 function desconectarBluetooth(){
+  bleDesconexionManual = true;
   if(bleDispositivo && bleDispositivo.gatt.connected) bleDispositivo.gatt.disconnect();
-  else alDesconectarBle();
+  else alPerderConexion();
 }
 
 async function regarAhora(){

@@ -531,39 +531,17 @@
       <h2 class="titulo reveal">Tu jardín está <em>casi</em> en su mejor momento</h2>
 
       <div class="stats reveal">
-        <div class="stat"><b>4</b><span>Plantas</span></div>
+        <div class="stat"><b id="statPlantasInicio">0</b><span>Plantas</span></div>
         <div class="stat alerta"><b>1</b><span>Alerta</span></div>
         <div class="stat hum"><b id="stat-hum">62%</b><span>Hum. media</span></div>
       </div>
 
       <div class="seccion-label reveal">
         <h3>Mis plantas</h3>
-        <a onclick="toast('Pronto podrás gestionar tu colección completa')">Ver todas</a>
+        <a onclick="verTodasPlantas()">Ver todas</a>
       </div>
 
-      <div class="carrusel reveal">
-        <div class="planta-card">
-          <span class="planta-emoji">🪴</span>
-          <h4>Monstera</h4><p>Sala · 2 años</p>
-          <div class="mini-hum"><div class="mini-barra"><i style="width:71%"></i></div>71%</div>
-        </div>
-        <div class="planta-card">
-          <span class="alerta-dot"></span>
-          <span class="planta-emoji">🌵</span>
-          <h4>Suculenta</h4><p>Ventana · 8 meses</p>
-          <div class="mini-hum"><div class="mini-barra"><i style="width:24%"></i></div>24%</div>
-        </div>
-        <div class="planta-card">
-          <span class="planta-emoji">🌿</span>
-          <h4>Potus</h4><p>Cocina · 1 año</p>
-          <div class="mini-hum"><div class="mini-barra"><i style="width:65%"></i></div>65%</div>
-        </div>
-        <div class="planta-card">
-          <span class="planta-emoji">🌱</span>
-          <h4>Albahaca</h4><p>Balcón · 3 meses</p>
-          <div class="mini-hum"><div class="mini-barra"><i style="width:58%"></i></div>58%</div>
-        </div>
-      </div>
+      <div class="carrusel reveal" id="carruselPlantas"></div>
 
       <div class="card tip-card reveal">
         <div class="tip-icono">💡</div>
@@ -1304,21 +1282,52 @@ try { plantas = JSON.parse(localStorage.getItem('folia_plantas')) || []; } catch
 function guardarPlantas(){ localStorage.setItem('folia_plantas', JSON.stringify(plantas)); }
 function escaparHtml(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function renderPlantas(){
+  // Lista completa (pagina de Humedad): añadir/quitar.
   const cont = document.getElementById('listaPlantas');
-  if(!cont) return;
-  if(plantas.length===0){
-    cont.innerHTML = '<div style="text-align:center;color:var(--muted);padding:22px 12px;font-size:.9rem;line-height:1.5">Aún no has añadido plantas.<br>Escribe un nombre arriba y pulsa «Añadir» 🌱</div>';
-  } else {
-    cont.innerHTML = plantas.map(p =>
-      '<div class="fila-planta">'+
-        '<span class="em">'+p.emoji+'</span>'+
-        '<div class="info"><b>'+escaparHtml(p.nombre)+'</b><span>'+escaparHtml(p.nota||'Tu planta')+'</span></div>'+
-        '<button onclick="quitarPlanta('+p.id+')" title="Quitar" style="background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:6px 4px;flex-shrink:0">✕</button>'+
+  if(cont){
+    if(plantas.length===0){
+      cont.innerHTML = '<div style="text-align:center;color:var(--muted);padding:22px 12px;font-size:.9rem;line-height:1.5">Aún no has añadido plantas.<br>Escribe un nombre arriba y pulsa «Añadir» 🌱</div>';
+    } else {
+      cont.innerHTML = plantas.map(p =>
+        '<div class="fila-planta">'+
+          '<span class="em">'+p.emoji+'</span>'+
+          '<div class="info"><b>'+escaparHtml(p.nombre)+'</b><span>'+escaparHtml(p.nota||'Tu planta')+'</span></div>'+
+          '<button onclick="quitarPlanta('+p.id+')" title="Quitar" style="background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:6px 4px;flex-shrink:0">✕</button>'+
+        '</div>'
+      ).join('');
+    }
+  }
+  // Carrusel del inicio (vista rápida) + tarjeta para añadir.
+  const car = document.getElementById('carruselPlantas');
+  if(car){
+    let html = plantas.map(p =>
+      '<div class="planta-card">'+
+        '<span class="planta-emoji">'+p.emoji+'</span>'+
+        '<h4>'+escaparHtml(p.nombre)+'</h4><p>'+escaparHtml(p.nota||'Tu planta')+'</p>'+
       '</div>'
     ).join('');
+    html += '<div class="planta-card" onclick="agregarPlantaRapido()" style="display:flex;flex-direction:column;align-items:center;justify-content:center;border:1.5px dashed var(--line);cursor:pointer">'+
+              '<span style="font-size:1.9rem;line-height:1;color:var(--sage)">＋</span>'+
+              '<h4 style="margin-top:6px;color:var(--muted)">Añadir</h4>'+
+            '</div>';
+    car.innerHTML = html;
   }
+  // Contadores.
   const sp = document.getElementById('statPlantas');
   if(sp) sp.textContent = plantas.length;
+  const spi = document.getElementById('statPlantasInicio');
+  if(spi) spi.textContent = plantas.length;
+}
+function agregarPlantaRapido(){
+  const nombre = (prompt('Nombre de tu planta:')||'').trim();
+  if(!nombre) return;
+  plantas.push({ id: Date.now(), nombre: nombre, emoji: EMOJIS_PLANTA[plantas.length % EMOJIS_PLANTA.length], nota: 'Añadida hoy' });
+  guardarPlantas(); renderPlantas();
+  toast('🌱 «'+nombre+'» añadida');
+}
+function verTodasPlantas(){
+  irA('humedad');
+  setTimeout(()=>{ const l=document.getElementById('listaPlantas'); if(l) l.scrollIntoView({behavior:'smooth',block:'center'}); }, 120);
 }
 function agregarPlanta(){
   const inp = document.getElementById('inputPlanta');

@@ -712,8 +712,9 @@
       </div>
 
       <div class="fila-botones reveal">
-        <button class="btn btn-fantasma" onclick="simularLectura()">Simular lectura</button>
-        <button class="btn btn-primario" onclick="toast('🔌 Próximamente: conexión con tu Arduino vía WiFi o puerto serie')">Conectar sensor</button>
+        <button class="btn btn-fantasma" id="btnSimular" onclick="simularLectura()">Simular lectura</button>
+        <button class="btn btn-primario" id="btnBle" onclick="conectarBluetooth()">Conectar sensor</button>
+        <button class="btn btn-fantasma" id="btnRegar" onclick="regarAhora()" style="display:none">💧 Regar ahora</button>
       </div>
     </section>
 
@@ -1093,7 +1094,7 @@ function simularLectura(){
   toast('📡 Lectura simulada: '+humedadActual+'% de humedad');
 }
 
-/* ---------- CONEXIÓN ARDUINO (futuro) ----------
+/* ---------- (ALTERNATIVA por WiFi/HTTP, NO usada — ahora se usa Bluetooth/BLE más abajo) ----------
    Cuando tengas tu sensor de humedad con Arduino + ESP32/ESP8266
    exponiendo un endpoint HTTP, descomenta esto:
 
@@ -1108,14 +1109,142 @@ function simularLectura(){
    También puedes llamar manualmente desde la consola:
    actualizarHumedad(57)
 ------------------------------------------------- */
+/* ---------- ESTADO DEL SENSOR (badge) ---------- */
+let sensorActivo = false;   // hay datos reales llegando del ESP32
+let tempSensor   = null;    // última temperatura recibida (°C)
+let bombaSensor  = false;   // estado de la bomba según el ESP32
+
+function pintarBadgeSensor(){
+  const badge = document.getElementById('badgeSensor');
+  if(!badge) return;
+  if(sensorActivo){
+    badge.classList.add('conectado');
+    let txt = '<span class="punto"></span> Conectado';
+    if(tempSensor !== null && !isNaN(tempSensor)) txt += ' · ' + tempSensor.toFixed(1) + '°C';
+    txt += ' · bomba ' + (bombaSensor ? 'ON 💧' : 'OFF');
+    badge.innerHTML = txt;
+  } else {
+    badge.classList.remove('conectado');
+    badge.innerHTML = '<span class="punto"></span> Arduino no conectado · modo demo';
+  }
+}
+
+/* Recibe la humedad (desde BLE o desde la consola) y mueve el gauge en vivo. */
 function actualizarHumedad(valor){
   humedadActual = Math.max(0, Math.min(100, Math.round(valor)));
-  const badge = document.getElementById('badgeSensor');
-  badge.classList.add('conectado');
-  badge.innerHTML = '<span class="punto"></span> Arduino conectado · datos en vivo';
+  sensorActivo = true;
+  pintarBadgeSensor();
   animarGauge(humedadActual);
 }
 window.actualizarHumedad = actualizarHumedad;
+
+/* =================================================================
+   CONEXIÓN POR BLUETOOTH (BLE) CON EL ESP32 "Folia-Riego"
+   Requiere navegador con Web Bluetooth (Chrome/Edge en Android o PC
+   de escritorio). iOS/Safari NO soporta Web Bluetooth.
+   Los UUID coinciden con los del sketch RiegoAutomatico.ino.
+   ================================================================= */
+const BLE_SERVICIO = '8f0e0a00-7c2a-4b1e-9d3f-1a2b3c4d5e6f';
+const BLE_HUMEDAD  = '8f0e0a01-7c2a-4b1e-9d3f-1a2b3c4d5e6f';
+const BLE_TEMP     = '8f0e0a02-7c2a-4b1e-9d3f-1a2b3c4d5e6f';
+const BLE_BOMBA    = '8f0e0a03-7c2a-4b1e-9d3f-1a2b3c4d5e6f';
+const BLE_COMANDO  = '8f0e0a04-7c2a-4b1e-9d3f-1a2b3c4d5e6f';
+
+let bleDispositivo = null;
+let bleCharComando = null;
+const bleDecoder = new TextDecoder('utf-8');
+
+async function conectarBluetooth(){
+  if(!navigator.bluetooth){
+    toast('⚠️ Este navegador no soporta Bluetooth web. Usa Chrome o Edge en Android o PC (el iPhone no lo permite).');
+    return;
+  }
+  try {
+    toast('🔍 Buscando "Folia-Riego"…');
+    bleDispositivo = await navigator.bluetooth.requestDevice({
+      filters: [{ services: [BLE_SERVICIO] }]
+    });
+    bleDispositivo.addEventListener('gattserverdisconnected', alDesconectarBle);
+
+    const server   = await bleDispositivo.gatt.connect();
+    const servicio = await server.getPrimaryService(BLE_SERVICIO);
+
+    // Humedad (principal): mueve el gauge en vivo.
+    const cHum = await servicio.getCharacteristic(BLE_HUMEDAD);
+    await cHum.startNotifications();
+    cHum.addEventListener('characteristicvaluechanged', ev => {
+      const v = parseFloat(bleDecoder.decode(ev.target.value));
+      if(!isNaN(v)) actualizarHumedad(v);
+    });
+
+    // Temperatura (opcional).
+    try {
+      const cTemp = await servicio.getCharacteristic(BLE_TEMP);
+      await cTemp.startNotifications();
+      cTemp.addEventListener('characteristicvaluechanged', ev => {
+        const v = parseFloat(bleDecoder.decode(ev.target.value));
+        if(!isNaN(v)){ tempSensor = v; pintarBadgeSensor(); }
+      });
+    } catch(e){ console.warn('Sin característica de temperatura', e); }
+
+    // Estado de la bomba (opcional).
+    try {
+      const cBomba = await servicio.getCharacteristic(BLE_BOMBA);
+      await cBomba.startNotifications();
+      cBomba.addEventListener('characteristicvaluechanged', ev => {
+        bombaSensor = bleDecoder.decode(ev.target.value).trim() === '1';
+        pintarBadgeSensor();
+      });
+    } catch(e){ console.warn('Sin característica de bomba', e); }
+
+    // Comando para regar manualmente (opcional).
+    try { bleCharComando = await servicio.getCharacteristic(BLE_COMANDO); }
+    catch(e){ bleCharComando = null; }
+
+    sensorActivo = true;
+    pintarBadgeSensor();
+    actualizarBotonesBle(true);
+    toast('🌿 Sensor conectado por Bluetooth');
+  } catch(err){
+    console.warn('Conexión BLE cancelada o fallida', err);
+    if(err && err.name !== 'NotFoundError') toast('No se pudo conectar: ' + (err.message || err));
+  }
+}
+
+function alDesconectarBle(){
+  sensorActivo  = false;
+  tempSensor    = null;
+  bombaSensor   = false;
+  bleCharComando = null;
+  pintarBadgeSensor();
+  actualizarBotonesBle(false);
+  toast('🔌 Sensor desconectado');
+}
+
+function desconectarBluetooth(){
+  if(bleDispositivo && bleDispositivo.gatt.connected) bleDispositivo.gatt.disconnect();
+  else alDesconectarBle();
+}
+
+async function regarAhora(){
+  if(!bleCharComando){ toast('Conecta el sensor primero'); return; }
+  try {
+    await bleCharComando.writeValue(new TextEncoder().encode('REGAR'));
+    toast('💧 Riego manual enviado (5 s)');
+  } catch(e){ toast('No se pudo enviar el riego: ' + (e.message || e)); }
+}
+
+function actualizarBotonesBle(conectado){
+  const btnBle   = document.getElementById('btnBle');
+  const btnSim   = document.getElementById('btnSimular');
+  const btnRegar = document.getElementById('btnRegar');
+  if(btnBle){
+    btnBle.textContent = conectado ? 'Desconectar' : 'Conectar sensor';
+    btnBle.onclick     = conectado ? desconectarBluetooth : conectarBluetooth;
+  }
+  if(btnSim)   btnSim.style.display   = conectado ? 'none' : '';
+  if(btnRegar) btnRegar.style.display = conectado ? '' : 'none';
+}
 
 /* ================= plagas (acordeón) ================= */
 function togglePlaga(cab){

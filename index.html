@@ -815,6 +815,8 @@
         </div>
       </div>
 
+      <button class="btn btn-primario reveal" id="btnInstalar" onclick="instalarApp()" style="width:100%;margin-bottom:14px">📲 Instalar Folia</button>
+
       <div class="card reveal">
         <h3 style="margin:0 0 6px">Acerca de</h3>
         <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);color:var(--muted);font-size:.85rem"><span>Versión</span><span>Folia 1.1</span></div>
@@ -1345,6 +1347,44 @@ function refrescarPerfil(){
   np.value = localStorage.getItem('folia_nombre') || '';
   np.addEventListener('input', ()=>localStorage.setItem('folia_nombre', np.value.trim()));
 })();
+
+/* ================= instalar la app (PWA) ================= */
+let promptInstalar = null;
+const esStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+function actualizarBotonInstalar(){
+  const b = document.getElementById('btnInstalar');
+  if(!b) return;
+  if(esStandalone){ b.textContent = '✓ App instalada'; b.disabled = true; b.style.opacity = '.6'; }
+  else { b.textContent = '📲 Instalar Folia'; b.disabled = false; b.style.opacity = ''; }
+}
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  promptInstalar = e;               // guardamos el evento para dispararlo con el botón
+  actualizarBotonInstalar();
+  if(!localStorage.getItem('folia_aviso_instalar')){
+    localStorage.setItem('folia_aviso_instalar','1');
+    toast('📲 Puedes instalar Folia como app: entra en Perfil → Instalar Folia');
+  }
+});
+window.addEventListener('appinstalled', () => {
+  promptInstalar = null;
+  toast('🎉 ¡Folia instalada! Búscala en tu pantalla de inicio.');
+  actualizarBotonInstalar();
+});
+async function instalarApp(){
+  const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  if(promptInstalar){
+    promptInstalar.prompt();        // instalación nativa (Android / Chrome-Edge de PC)
+    try { await promptInstalar.userChoice; } catch(e){}
+    promptInstalar = null;
+    actualizarBotonInstalar();
+  } else if(esIOS){
+    toast('En iPhone: pulsa Compartir (el cuadro con la flecha ⬆️) y elige «Añadir a pantalla de inicio».');
+  } else {
+    toast('Abre el menú del navegador (⋮ o la barra de direcciones) y elige «Instalar app».');
+  }
+}
+actualizarBotonInstalar();
 
 /* ================= plagas (acordeón) ================= */
 function togglePlaga(cab){

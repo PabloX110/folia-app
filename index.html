@@ -533,7 +533,7 @@
       <div class="stats reveal">
         <div class="stat"><b id="statPlantasInicio">0</b><span>Plantas</span></div>
         <div class="stat alerta"><b id="statAlerta">0</b><span>Alerta</span></div>
-        <div class="stat hum"><b id="stat-hum">62%</b><span>Hum. media</span></div>
+        <div class="stat hum"><b id="stat-hum">—</b><span>Hum. media</span></div>
       </div>
 
       <div class="seccion-label reveal">
@@ -651,11 +651,11 @@
                   stroke-dasharray="282.7" stroke-dashoffset="282.7"/>
           </svg>
           <div class="gauge-centro">
-            <b><span id="valorHum">0</span><small>%</small></b>
+            <b><span id="valorHum">—</span><small>%</small></b>
             <span>humedad del sustrato</span>
           </div>
         </div>
-        <div class="gauge-estado" id="estadoHum">Óptima 🌿</div>
+        <div class="gauge-estado" id="estadoHum">Conecta tu sensor</div>
       </div>
 
       <div class="card historial reveal">
@@ -682,7 +682,6 @@
       </div>
 
       <div class="fila-botones reveal">
-        <button class="btn btn-fantasma" id="btnSimular" onclick="simularLectura()">Simular lectura</button>
         <button class="btn btn-primario" id="btnBle" onclick="conectarBluetooth()">Conectar sensor</button>
         <button class="btn btn-fantasma" id="btnRegar" onclick="regarAhora()" style="display:none">💧 Regar ahora</button>
       </div>
@@ -1078,14 +1077,24 @@ rotor.addEventListener('input', ()=>{ detenerAuto(); dibujarFrame(+rotor.value);
 
 /* ================= humedad ================= */
 const LARGO_ARCO = 282.7;          /* longitud del arco del medidor */
-let humedadActual = 62;            /* valor demo inicial */
+let humedadActual = null;          /* sin valor hasta que llegue del sensor */
 
 function animarGauge(valor){
   const arco = document.getElementById('arcoGauge');
+  const estado = document.getElementById('estadoHum');
+  if(valor === null || valor === undefined || isNaN(valor)){
+    arco.style.strokeDashoffset = LARGO_ARCO;            // arco vacío
+    document.getElementById('valorHum').textContent = '—';
+    document.getElementById('stat-hum').textContent = '—';
+    if(estado){
+      estado.textContent = sensorActivo ? 'Esperando lectura del sensor…' : 'Conecta tu sensor';
+      estado.style.color = 'var(--muted)';
+    }
+    return;
+  }
   arco.style.strokeDashoffset = LARGO_ARCO * (1 - valor/100);
   document.getElementById('valorHum').textContent = valor;
   document.getElementById('stat-hum').textContent = valor+'%';
-  const estado = document.getElementById('estadoHum');
   if(valor < 30){ estado.textContent='Sustrato seco · riega pronto 🏜️'; estado.style.color='var(--amber)'; }
   else if(valor < 45){ estado.textContent='Algo baja · vigílala 👀'; estado.style.color='var(--terra-soft)'; }
   else if(valor <= 75){ estado.textContent='Óptima 🌿'; estado.style.color='var(--sage)'; }
@@ -1136,15 +1145,17 @@ function pintarBadgeSensor(){
 function actualizarConsejo(){
   const al  = document.getElementById('statAlerta');
   const tip = document.getElementById('tipTexto');
-  const seca = sensorActivo && humedadActual < 40;
-  if(al) al.textContent = seca ? '1' : '0';
+  const hayDato = sensorActivo && humedadActual !== null && !isNaN(humedadActual);
+  if(al) al.textContent = (hayDato && humedadActual < 40) ? '1' : '0';
   if(!tip) return;
-  if(sensorActivo){
+  if(hayDato){
     if(humedadActual < 40)      tip.textContent = 'El sustrato está seco ('+humedadActual+'%). Riega con poca agua y deja drenar bien la maceta.';
     else if(humedadActual > 70) tip.textContent = 'El sustrato está muy húmedo ('+humedadActual+'%). No riegues todavía, espera a que baje.';
     else                        tip.textContent = 'La humedad del sustrato está en buen nivel ('+humedadActual+'%). 🌿';
+  } else if(sensorActivo){
+    tip.textContent = 'Sensor conectado. Esperando la primera lectura de humedad…';
   } else {
-    tip.textContent = 'Conecta tu sensor para ver consejos de riego en tiempo real. En general, riega cuando el sustrato baje del 40 %.';
+    tip.textContent = 'Conecta tu sensor para ver consejos de riego en tiempo real.';
   }
 }
 

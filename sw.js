@@ -1,5 +1,5 @@
 /* Folia — service worker: deja la app disponible sin conexión */
-const CACHE = 'folia-v6';
+const CACHE = 'folia-v7';
 const ASSETS = [
   './',
   './index.html',

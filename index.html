@@ -693,22 +693,14 @@
         </div>
       </div>
 
-      <div class="lista-plantas reveal">
-        <div class="fila-planta">
-          <span class="em">🪴</span>
-          <div class="info"><b>Monstera</b><span>Regada hace 2 días</span></div>
-          <span class="pct">71%</span>
+      <div class="reveal" style="margin-top:6px">
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input id="inputPlanta" placeholder="Nombre de tu planta" maxlength="28"
+            onkeydown="if(event.key==='Enter')agregarPlanta()"
+            style="flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--cream);font-family:var(--font-body);padding:12px 14px;border-radius:14px;outline:none;font-size:.9rem">
+          <button class="btn btn-primario" style="flex:0 0 auto;padding:12px 18px" onclick="agregarPlanta()">Añadir</button>
         </div>
-        <div class="fila-planta seca">
-          <span class="em">🌵</span>
-          <div class="info"><b>Suculenta</b><span>Regada hace 12 días · necesita agua</span></div>
-          <span class="pct">24%</span>
-        </div>
-        <div class="fila-planta">
-          <span class="em">🌿</span>
-          <div class="info"><b>Potus</b><span>Regada hace 3 días</span></div>
-          <span class="pct">65%</span>
-        </div>
+        <div class="lista-plantas" id="listaPlantas"></div>
       </div>
 
       <div class="fila-botones reveal">
@@ -798,6 +790,38 @@
       </div>
     </section>
 
+    <!-- ============ PERFIL ============ -->
+    <section class="page" id="pag-perfil">
+      <p class="kicker reveal">Tu cuenta</p>
+      <h2 class="titulo reveal">Mi <em>perfil</em></h2>
+
+      <div class="card reveal" style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+        <div style="width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--leaf),var(--sage));display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0">🌱</div>
+        <div style="flex:1;min-width:0">
+          <input id="nombrePerfil" placeholder="Escribe tu nombre" maxlength="24"
+            style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--line);color:var(--cream);font-family:var(--font-titulo);font-size:1.15rem;padding:4px 0;outline:none">
+          <div style="color:var(--muted);font-size:.8rem;margin-top:4px">Cuidador/a de plantas 🌿</div>
+        </div>
+      </div>
+
+      <div class="reveal" style="display:flex;gap:10px;margin-bottom:14px">
+        <div class="card" style="flex:1;text-align:center;padding:18px 8px">
+          <b id="statPlantas" style="font-family:var(--font-titulo);font-size:1.6rem;color:var(--sage)">0</b>
+          <div style="color:var(--muted);font-size:.75rem;margin-top:2px">plantas</div>
+        </div>
+        <div class="card" style="flex:1;text-align:center;padding:18px 8px">
+          <b id="statSensor" style="font-family:var(--font-titulo);font-size:1.6rem;color:var(--sage)">—</b>
+          <div style="color:var(--muted);font-size:.75rem;margin-top:2px">sensor</div>
+        </div>
+      </div>
+
+      <div class="card reveal">
+        <h3 style="margin:0 0 6px">Acerca de</h3>
+        <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);color:var(--muted);font-size:.85rem"><span>Versión</span><span>Folia 1.1</span></div>
+        <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line);color:var(--muted);font-size:.85rem"><span>Sensor Bluetooth</span><span id="estadoSensorPerfil">Desconectado</span></div>
+      </div>
+    </section>
+
   </main>
 
   <!-- ============ NAVEGACIÓN ============ -->
@@ -820,7 +844,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 7.7 8 9 4.5-1.3 8-4 8-9V6Z"/><path d="m9 12 2 2 4-4"/></svg>
       Salud
     </button>
-    <button class="tab" data-pag="inicio" onclick="toast('Perfil disponible en la próxima versión 🌱')">
+    <button class="tab" data-pag="perfil">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/></svg>
       Perfil
     </button>
@@ -837,9 +861,9 @@ function irA(nombre){
   document.getElementById('pag-'+nombre).classList.add('activa');
   tabs.forEach(t=>t.classList.toggle('activa', t.dataset.pag===nombre && !t.classList.contains('destacada')));
   if(nombre==='humedad') animarGauge(humedadActual);
+  if(nombre==='perfil') refrescarPerfil();
 }
 tabs.forEach(t=>{
-  if(t.textContent.trim()==='Perfil') return; // el de perfil solo muestra toast
   t.addEventListener('click',()=>irA(t.dataset.pag));
 });
 
@@ -1135,6 +1159,7 @@ function actualizarHumedad(valor){
   sensorActivo = true;
   pintarBadgeSensor();
   animarGauge(humedadActual);
+  refrescarPerfil();
 }
 window.actualizarHumedad = actualizarHumedad;
 
@@ -1152,11 +1177,18 @@ const BLE_COMANDO  = '8f0e0a04-7c2a-4b1e-9d3f-1a2b3c4d5e6f';
 
 let bleDispositivo = null;
 let bleCharComando = null;
+let bleRecibioDatos = false;
+let bleWatchdog = null;
 const bleDecoder = new TextDecoder('utf-8');
 
 async function conectarBluetooth(){
   if(!navigator.bluetooth){
-    toast('⚠️ Este navegador no soporta Bluetooth web. Usa Chrome o Edge en Android o PC (el iPhone no lo permite).');
+    const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+    if(esIOS){
+      toast('En iPhone/iPad, Safari no permite Bluetooth. Abre esta misma web en la app gratuita «Bluefy» (App Store) y ahí sí podrás conectar el sensor.');
+    } else {
+      toast('⚠️ Este navegador no soporta Bluetooth web. Usa Chrome o Edge en Android o en PC.');
+    }
     return;
   }
   try {
@@ -1170,12 +1202,18 @@ async function conectarBluetooth(){
     const servicio = await server.getPrimaryService(BLE_SERVICIO);
 
     // Humedad (principal): mueve el gauge en vivo.
+    bleRecibioDatos = false;
     const cHum = await servicio.getCharacteristic(BLE_HUMEDAD);
     await cHum.startNotifications();
     cHum.addEventListener('characteristicvaluechanged', ev => {
       const v = parseFloat(bleDecoder.decode(ev.target.value));
-      if(!isNaN(v)) actualizarHumedad(v);
+      if(!isNaN(v)){ bleRecibioDatos = true; actualizarHumedad(v); }
     });
+    // Lee el valor actual de inmediato, sin esperar a la primera notificación.
+    try {
+      const v0 = parseFloat(bleDecoder.decode(await cHum.readValue()));
+      if(!isNaN(v0)){ bleRecibioDatos = true; actualizarHumedad(v0); }
+    } catch(e){}
 
     // Temperatura (opcional).
     try {
@@ -1204,7 +1242,16 @@ async function conectarBluetooth(){
     sensorActivo = true;
     pintarBadgeSensor();
     actualizarBotonesBle(true);
+    refrescarPerfil();
     toast('🌿 Sensor conectado por Bluetooth');
+
+    // Si en 7 s no llegó humedad válida, probablemente falta cablear el DHT22.
+    clearTimeout(bleWatchdog);
+    bleWatchdog = setTimeout(() => {
+      if(bleDispositivo && bleDispositivo.gatt.connected && !bleRecibioDatos){
+        toast('Conectado, pero el sensor no envía humedad. ¿Está cableado el DHT22 al ESP32 (DATA→GPIO4)?');
+      }
+    }, 7000);
   } catch(err){
     console.warn('Conexión BLE cancelada o fallida', err);
     if(err && err.name !== 'NotFoundError') toast('No se pudo conectar: ' + (err.message || err));
@@ -1216,8 +1263,10 @@ function alDesconectarBle(){
   tempSensor    = null;
   bombaSensor   = false;
   bleCharComando = null;
+  clearTimeout(bleWatchdog);
   pintarBadgeSensor();
   actualizarBotonesBle(false);
+  refrescarPerfil();
   toast('🔌 Sensor desconectado');
 }
 
@@ -1245,6 +1294,57 @@ function actualizarBotonesBle(conectado){
   if(btnSim)   btnSim.style.display   = conectado ? 'none' : '';
   if(btnRegar) btnRegar.style.display = conectado ? '' : 'none';
 }
+
+/* ================= plantas del usuario (guardadas en el navegador) ================= */
+let plantas = [];
+const EMOJIS_PLANTA = ['🪴','🌿','🌵','🌱','🌻','🍀','🌹','🎋'];
+try { plantas = JSON.parse(localStorage.getItem('folia_plantas')) || []; } catch(e){ plantas = []; }
+function guardarPlantas(){ localStorage.setItem('folia_plantas', JSON.stringify(plantas)); }
+function escaparHtml(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function renderPlantas(){
+  const cont = document.getElementById('listaPlantas');
+  if(!cont) return;
+  if(plantas.length===0){
+    cont.innerHTML = '<div style="text-align:center;color:var(--muted);padding:22px 12px;font-size:.9rem;line-height:1.5">Aún no has añadido plantas.<br>Escribe un nombre arriba y pulsa «Añadir» 🌱</div>';
+  } else {
+    cont.innerHTML = plantas.map(p =>
+      '<div class="fila-planta">'+
+        '<span class="em">'+p.emoji+'</span>'+
+        '<div class="info"><b>'+escaparHtml(p.nombre)+'</b><span>'+escaparHtml(p.nota||'Tu planta')+'</span></div>'+
+        '<button onclick="quitarPlanta('+p.id+')" title="Quitar" style="background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer;padding:6px 4px;flex-shrink:0">✕</button>'+
+      '</div>'
+    ).join('');
+  }
+  const sp = document.getElementById('statPlantas');
+  if(sp) sp.textContent = plantas.length;
+}
+function agregarPlanta(){
+  const inp = document.getElementById('inputPlanta');
+  const nombre = (inp.value||'').trim();
+  if(!nombre){ toast('Escribe el nombre de la planta'); return; }
+  plantas.push({ id: Date.now(), nombre: nombre, emoji: EMOJIS_PLANTA[plantas.length % EMOJIS_PLANTA.length], nota: 'Añadida hoy' });
+  guardarPlantas(); renderPlantas();
+  inp.value=''; inp.focus();
+  toast('🌱 «'+nombre+'» añadida');
+}
+function quitarPlanta(id){
+  plantas = plantas.filter(p=>p.id!==id);
+  guardarPlantas(); renderPlantas();
+}
+renderPlantas();
+
+/* ================= perfil ================= */
+function refrescarPerfil(){
+  const sp = document.getElementById('statPlantas'); if(sp) sp.textContent = plantas.length;
+  const ss = document.getElementById('statSensor'); if(ss) ss.textContent = sensorActivo ? 'OK' : '—';
+  const ep = document.getElementById('estadoSensorPerfil'); if(ep) ep.textContent = sensorActivo ? 'Conectado' : 'Desconectado';
+}
+(function initPerfil(){
+  const np = document.getElementById('nombrePerfil');
+  if(!np) return;
+  np.value = localStorage.getItem('folia_nombre') || '';
+  np.addEventListener('input', ()=>localStorage.setItem('folia_nombre', np.value.trim()));
+})();
 
 /* ================= plagas (acordeón) ================= */
 function togglePlaga(cab){

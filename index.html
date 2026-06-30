@@ -685,6 +685,15 @@
         <button class="btn btn-primario" id="btnBle" onclick="conectarBluetooth()">Conectar sensor</button>
         <button class="btn btn-fantasma" id="btnRegar" onclick="regarAhora()" style="display:none">💧 Regar ahora</button>
       </div>
+
+      <div id="filaCalibrar" style="display:none;margin-top:14px">
+        <p class="kicker">Calibración del sensor</p>
+        <div class="fila-botones" style="margin-top:8px">
+          <button class="btn btn-fantasma" onclick="calibrarSeco()">🌵 Estoy en aire</button>
+          <button class="btn btn-fantasma" onclick="calibrarMojado()">💧 Estoy en agua</button>
+        </div>
+        <p style="font-size:.72rem;color:var(--muted);margin-top:8px;line-height:1.4">Una sola vez: con el sensor en el <b>aire</b> pulsa «aire», y con la sonda en <b>agua</b> pulsa «agua». Queda guardado.</p>
+      </div>
     </section>
 
     <!-- ============ SALUD / PLAGAS ============ -->
@@ -1299,12 +1308,19 @@ function desconectarBluetooth(){
   else alPerderConexion();
 }
 
+async function enviarComando(cmd){
+  if(!bleCharComando){ toast('Conecta el sensor primero'); return false; }
+  try { await bleCharComando.writeValue(new TextEncoder().encode(cmd)); return true; }
+  catch(e){ toast('Error al enviar: ' + (e.message || e)); return false; }
+}
 async function regarAhora(){
-  if(!bleCharComando){ toast('Conecta el sensor primero'); return; }
-  try {
-    await bleCharComando.writeValue(new TextEncoder().encode('REGAR'));
-    toast('💧 Riego manual enviado (5 s)');
-  } catch(e){ toast('No se pudo enviar el riego: ' + (e.message || e)); }
+  if(await enviarComando('REGAR')) toast('💧 Riego manual enviado (5 s)');
+}
+async function calibrarSeco(){
+  if(await enviarComando('CAL_SECO')) toast('🌵 Punto SECO (0%) guardado');
+}
+async function calibrarMojado(){
+  if(await enviarComando('CAL_MOJADO')) toast('💧 Punto MOJADO (100%) guardado');
 }
 
 function actualizarBotonesBle(conectado){
@@ -1317,6 +1333,8 @@ function actualizarBotonesBle(conectado){
   }
   if(btnSim)   btnSim.style.display   = conectado ? 'none' : '';
   if(btnRegar) btnRegar.style.display = conectado ? '' : 'none';
+  const filaCal = document.getElementById('filaCalibrar');
+  if(filaCal) filaCal.style.display = conectado ? '' : 'none';
 }
 
 /* ================= plantas del usuario (guardadas en el navegador) ================= */

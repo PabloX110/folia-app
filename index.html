@@ -688,11 +688,8 @@
 
       <div id="filaCalibrar" style="display:none;margin-top:14px">
         <p class="kicker">Calibración del sensor</p>
-        <div class="fila-botones" style="margin-top:8px">
-          <button class="btn btn-fantasma" onclick="calibrarSeco()">🌵 Estoy en aire</button>
-          <button class="btn btn-fantasma" onclick="calibrarMojado()">💧 Estoy en agua</button>
-        </div>
-        <p style="font-size:.72rem;color:var(--muted);margin-top:8px;line-height:1.4">Una sola vez: con el sensor en el <b>aire</b> pulsa «aire», y con la sonda en <b>agua</b> pulsa «agua». Queda guardado.</p>
+        <button class="btn btn-fantasma" style="width:100%;margin-top:8px" onclick="calibrarMojado()">💧 Calibrar (sonda en agua)</button>
+        <p style="font-size:.72rem;color:var(--muted);margin-top:8px;line-height:1.4">Mete la sonda en <b>agua</b> y pulsa esto una vez (fija el 100%). El aire se toma como 0% solo, no hay que calibrarlo.</p>
       </div>
     </section>
 
